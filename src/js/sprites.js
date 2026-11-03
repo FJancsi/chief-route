@@ -29,7 +29,7 @@ export function heroRows(o, frame = 0) {
     '..hhhhhhhh..',
     '..hssssssh..',
     o.shades ? '..gggssggg..' : '..ssessess..',
-    '..ssssssss..',                               // nose on the right = facing right
+    '..ssssssss..',                               // same width as the face (no "ear")
     '...sskkss...',
     '....ssss....',
   ];
@@ -83,6 +83,7 @@ export function heroRows(o, frame = 0) {
 // Hero evolution (Requirements R28)
 export const OUTFITS = {
   kid:      { kid: true, shirt: 'w', pants: 'b', shorts: true },
+  teen:     { shirt: 'G', pants: 'b' },              // high school: grown-up sprite (swap, never animated)
   student:  { shirt: 'H', pants: 'b', backpack: true },
   casual:   { shirt: 'c', pants: 'b', hold: 'coffee' },
   frontend: { shirt: 'c', pants: 'b', hold: 'coffee', shades: true },
@@ -180,7 +181,7 @@ const ICONS = {
   badge:     [['...yy...', '...yy...', 'yyyyyyyy', '.yyyyyy.', '..yyyy..', '.yy..yy.', 'yy....yy'], {}],
   robot:     [['....kk....', '....ki....', '.kkkkkkkk.', 'kllllllllk', 'klGllllGlk', 'kllllllllk', 'kllkkkkllk',
                '.kkkkkkkk.', '..kllllk..', '.kllllllk.', '.kllllllk.', '..kk..kk..'], {}],
-               flats: [flatsRows(), {}],
+  flats:     [flatsRows(), {}],
   node:  [['...kk...', '.kkGGkk.', 'kGGGGGGk', 'kGwGGwGk', 'kGwwGwGk',
            'kGwGwwGk', 'kGwGGwGk', '.kkGGkk.', '...kk...'], { G: '#539e43' }],   // NodeJS hexagon with an "N"
   stack: [['.kkkkkk.', 'kqqqqqqk', '.kkkkkk.', 'kppppppk',

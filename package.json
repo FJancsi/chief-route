@@ -1,0 +1,20 @@
+{
+  "name": "chief-route",
+  "version": "1.0.0",
+  "description": "My path to the Chief title as a funny animation",
+  "homepage": "https://github.com/FJancsi/chief-route#readme",
+  "bugs": {
+    "url": "https://github.com/FJancsi/chief-route/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FJancsi/chief-route.git"
+  },
+  "license": "MIT",
+  "author": "FJancsi",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

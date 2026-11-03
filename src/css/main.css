@@ -75,3 +75,13 @@ body {
 
 .blink { animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
+
+/* developer label, top left (removed in the final build) */
+#debug {
+  position: absolute;
+  left: calc(var(--u) * 6);
+  top: calc(var(--u) * 6);
+  padding: calc(var(--u) * 2) calc(var(--u) * 4);
+  background: var(--ink);
+  color: var(--green);
+}

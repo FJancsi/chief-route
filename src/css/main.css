@@ -85,3 +85,97 @@ body {
   background: var(--ink);
   color: var(--green);
 }
+
+/* ===== Piece 4: HUD, dialog, banners ===== */
+
+/* move the test label below the HUD */
+#debug { top: calc(var(--u) * 34); }
+
+/* readable "tab" on top of the dialog border */
+#prompt {
+  right: calc(var(--u) * 8);
+  bottom: 0;
+  padding: 0 calc(var(--u) * 2);
+  background: var(--ink);
+}
+
+/* ---------- HUD (top bar) ---------- */
+cq-hud {
+  display: block;
+  position: absolute;
+  inset: 0 0 auto 0;
+  padding: calc(var(--u) * 3) calc(var(--u) * 6) calc(var(--u) * 6);
+  line-height: 1.5;
+  color: var(--grey);
+  background: linear-gradient(var(--ink) 70%, transparent);
+
+  .row { display: flex; justify-content: space-between; align-items: center; gap: calc(var(--u) * 6); }
+  b { font-weight: normal; color: var(--yellow); }
+
+  .xp {
+    flex: 1;
+    height: calc(var(--u) * 6);
+    border: var(--u) solid var(--white);
+    i {
+      display: block;
+      height: 100%;
+      width: calc(var(--xp, 0) * 100%);
+      background: var(--pink);
+      transition: width .8s steps(10);
+    }
+  }
+}
+
+/* ---------- dialog box (bottom) ---------- */
+cq-dialog {
+  display: block;
+  position: absolute;
+  left: calc(var(--u) * 4);
+  right: calc(var(--u) * 4);
+  bottom: calc(var(--u) * 4);
+  padding: calc(var(--u) * 4) calc(var(--u) * 6);
+  line-height: 1.5;
+  background: var(--night);
+  border: calc(var(--u) * 2) solid var(--white);
+  box-shadow: 0 0 0 calc(var(--u) * 2) var(--ink);
+  transition: translate .24s steps(3);
+
+  .name  { color: var(--pink); }
+  .real  { color: var(--grey); }
+  .txt   { min-height: 3em; }
+  .ghost { visibility: hidden; }   /* untyped text keeps its space, so words never jump lines */
+}
+@starting-style {
+  cq-dialog { translate: 0 calc(var(--u) * 60); }   /* slides up from below, no scaling */
+}
+.anon .real { display: none; }     /* open the page with ?anon to hide client names */
+
+/* ---------- banners ---------- */
+#fx { position: absolute; inset: 0; pointer-events: none; }
+
+.banner {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  translate: -50% -50%;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 6);
+  max-width: calc(var(--u) * 300);
+  padding: calc(var(--u) * 5) calc(var(--u) * 8);
+  white-space: pre-line;
+  text-align: center;
+  line-height: 1.6;
+  color: var(--yellow);
+  background: var(--ink);
+  border: calc(var(--u) * 2) solid currentColor;
+
+  canvas { image-rendering: pixelated; flex: none; }
+
+  &.item    { color: var(--cyan); }
+  &.skill   { color: var(--green); }
+  &.equip   { color: var(--pink); }
+  &.boss    { color: #ff5a5a; }
+  &.chapter { color: var(--white); }
+  &.title   { box-shadow: 0 0 0 calc(var(--u) * 2) var(--pink), 0 0 0 calc(var(--u) * 4) var(--ink); }
+}

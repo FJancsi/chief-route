@@ -1,11 +1,16 @@
-// PIECES 2+3 - engine + sprite test. ONE KEY ONLY: SPACE.
+// PIECE 4 - HUD, dialog and banner demo. ONE KEY ONLY: SPACE.
 // Every scene plays its own animation; SPACE during a scene jumps to its end.
+// The hero is always drawn at scale 2 (R37).
 import { Engine, WORLDS, GROUND, tween, ease, sleep } from './engine.js';
 import { C } from './palette.js';
-import { bakeAll, ITEM_KEYS, ENEMY_KEYS, NPC_KEYS, OUTFITS } from './sprites.js';
+import { bakeAll } from './sprites.js';
+import { banner } from './ui.js';
 
 const $ = sel => document.querySelector(sel);
 const stage = $('#stage'), overlay = $('#overlay'), prompt = $('#prompt'), debug = $('#debug');
+const hud = $('cq-hud'), dialog = $('cq-dialog'), fx = $('#fx');
+
+if (new URLSearchParams(location.search).has('anon')) document.body.classList.add('anon');
 
 // ---------- pixel-perfect scaling ----------
 function fit() {
@@ -21,12 +26,13 @@ const S = await bakeAll();
 const engine = new Engine($('#screen'));
 const hero = engine.add({ frames: S.hero.kid, x: 70, walker: true, z: 2 });
 
-// ---------- helpers ----------
-let temp = [];                                         // actors that live for one scene
+// ---------- helpers (these move to story.js in Piece 5) ----------
+let temp = [];
 const spawn = props => { const a = engine.add(props); temp.push(a); return a; };
 const clearTemp = () => { temp.forEach(a => engine.remove(a)); temp = []; };
-const live = s => !s.aborted;                          // skip one-off effects when skipped
+const live = s => !s.aborted;
 const setWorld = name => { engine.rain = false; engine.world = WORLDS[name]; };
+const ahead = sx => engine.camera + 140 + sx;            // world x that lands at screen x after walk()
 
 async function walk(s, dist = 140, ms = 1600) {
   engine.walking = true;
@@ -34,110 +40,110 @@ async function walk(s, dist = 140, ms = 1600) {
   engine.walking = false;
 }
 
+const say = (s, text, opt = {}) => dialog.say(text, { ...opt, signal: s });
+const show = (s, text, kind, icon) => banner(fx, { text, kind, icon: icon && S.icon[icon] }, s);
+const withNote = (a, b) => (b ? `${a}\n${b}` : a);
+
+async function loot(s, icon, name, note) {
+  if (live(s)) engine.burst(hero.x, 80, 16);
+  hud.addItem(s);
+  await show(s, withNote(`GOT: ${name}`, note), 'item', icon);
+}
+async function equip(s, outfit, name, note) {
+  if (live(s)) { engine.flash(); engine.burst(hero.x, 100, 24, [C.pink, C.yellow]); }
+  hero.frames = S.hero[outfit];                          // outfit swap, same size
+  await show(s, withNote(`EQUIP: ${name}`, note), 'equip');
+}
+async function skill(s, name, note) {
+  if (live(s)) engine.burst(hero.x, 80, 12, [C.green, C.white]);
+  await show(s, withNote(`SKILL UP: ${name}`, note), 'skill');
+}
 async function shoot(s, target, kill = true) {
   const p = spawn({ x: hero.x + 16, y: GROUND - 18, z: 3,
     draw: (g, x, y) => { g.fillStyle = C.yellow; g.fillRect(x - 3, y, 6, 2); } });
-  await tween(p, { x: target.x - engine.camera }, 260, s);
+  await tween(p, { x: target.x - engine.camera - 20 }, 260, s);
   engine.remove(p);
-  if (live(s)) engine.burst(target.x - engine.camera, GROUND - 12, 10, [C.green, C.white]);
+  if (live(s)) { engine.burst(target.x - engine.camera, GROUND - 20, 10, [C.green, C.white]); engine.quake(4); }
   if (kill) engine.remove(target);
 }
 
-// ---------- scene types ----------
-const outfitScene = (outfit, world, label) => [label, async s => {
-  setWorld(world);
-  Object.assign(hero, { alpha: 1, scale: 2, frames: S.hero[outfit] });
-  if (live(s)) { engine.flash(); engine.burst(hero.x, 90, 24); }
-  await walk(s);
-  hero.scale = 4;                                      // automatic close-up
-  await sleep(1800, s);
-  hero.scale = 2;
-}];
-
-const matrixScene = ['MATRIX + MORPHEUS', async s => {
-  engine.rain = true;
-  const pill = col => (g, x, y) => { g.fillStyle = col; g.fillRect(x - 2, y, 4, 3); };
-  const morpheus = spawn({ frames: S.npc.morpheus, x: 210, flip: true, alpha: 0, z: 2 });
-  const red  = spawn({ x: 196, y: GROUND - 20, alpha: 0, z: 3, draw: pill('#ff3030') });
-  const blue = spawn({ x: 224, y: GROUND - 20, alpha: 0, z: 3, draw: pill('#3080ff') });
-  await Promise.all([morpheus, red, blue].map(a => tween(a, { alpha: 1 }, 800, s)));
-  await sleep(800, s);
-  await tween(red, { x: hero.x + 8, y: GROUND - 30 }, 700, s, ease.inOut);
-  engine.remove(red);
-  if (live(s)) { engine.flash(); engine.burst(hero.x, 90, 30, [C.green, C.white]); }
-  await sleep(1200, s);
-}];
-
-const fightScene = ['BUG FIGHT + IE6 TROLL', async s => {
-  setWorld('market');
-  hero.frames = S.hero.casual;
-  const bugs = [170, 205, 240].map(x =>
-    spawn({ img: S.icon.bug, world: true, x: engine.camera + 140 + x, bob: 1, z: 2 }));
-  await walk(s);
-  for (const b of bugs) await shoot(s, b);
-  const troll = spawn({ img: S.icon.troll, world: true, x: engine.camera + 250, alpha: 0, z: 2 });
-  await tween(troll, { alpha: 1 }, 500, s);
-  for (let i = 0; i < 3; i++) {
-    await shoot(s, troll, i === 2);
-    if (live(s)) engine.quake(6);
-    await sleep(250, s);
-  }
-}];
-
-// ---------- gallery pages ----------
-function paginate(title, imgs, scale = 2) {
-  const pages = [];
-  let page, x, y, rowH;
-  const newPage = () => {
-    page = { title: `${title} ${pages.length + 1}`, items: [] };
-    pages.push(page); x = 10; y = 24; rowH = 0;
-  };
-  newPage();
-  for (const img of imgs) {
-    const w = img.width * scale, h = img.height * scale;
-    if (x + w > 310) { x = 10; y += rowH + 8; rowH = 0; }
-    if (y + h > 174) newPage();
-    page.items.push({ img, scale, x: Math.round(x + w / 2), y: y + h });
-    x += w + 10;
-    rowH = Math.max(rowH, h);
-  }
-  return pages;
-}
-
-const PAGES = [
-  ...paginate('OUTFITS', Object.keys(OUTFITS).map(k => S.hero[k][0]), 3),
-  ...paginate('NPCS', NPC_KEYS.map(k => S.npc[k][0]), 3),
-  ...paginate('ITEMS', ITEM_KEYS.map(k => S.icon[k])),
-  ...paginate('ENEMIES', ENEMY_KEYS.map(k => S.icon[k])),
-];
-
-const galleryScene = page => [page.title, async s => {
-  setWorld('epam');
-  hero.alpha = 0;
-  for (const it of page.items) {                       // sprites pop in one by one
-    spawn({ ...it, z: 5 });
-    if (live(s)) engine.burst(it.x, it.y - 8, 4);
-    await sleep(120, s);
-  }
-}];
-
-// ---------- scene list (1 entry = 1 SPACE press) ----------
+// ---------- demo scenes (1 entry = 1 SPACE press) ----------
 const SCENES = [
-  outfitScene('kid', 'village', 'KID: PLAIN TEE'),
-  matrixScene,
-  outfitScene('student', 'academy', 'HOODIE+BACKPACK'),
-  outfitScene('casual', 'office', 'CASUAL+COFFEE'),
-  fightScene,
-  outfitScene('frontend', 'cas', '+SHADES'),
-  outfitScene('d2', 'epam', 'D2 HAWAII SHIRT'),
-  outfitScene('d3', 'hotel', 'D3 FLIP-FLOPS'),
-  outfitScene('d3', 'bank', 'BANK REALM'),
-  outfitScene('d4', 'cloud', 'D4 QA CAP'),
-  outfitScene('d5', 'throne', "D5 CHIEF'S BREW"),
-  ...PAGES.map(galleryScene),
+  ['HUD + DIALOG + LOOT', async s => {
+    setWorld('village');
+    hero.frames = S.hero.kid;
+    hud.hidden = false;
+    await hud.set({ lv: 0, guild: 'HOME', title: '---', path: '---' }, s);
+    const chest = spawn({ img: S.icon.chest, world: true, x: ahead(150), z: 1 });
+    await walk(s);
+    await say(s, 'Age 12. A big box is waiting at home...', { who: 'NARRATOR' });
+    chest.img = S.icon.chestOpen;
+    await loot(s, 'c64', 'COMMODORE 64', 'YOUR FIRST PC!');
+  }],
+
+  ['SKILL + EQUIP', async s => {
+    setWorld('academy');
+    await hud.set({ guild: 'UNIVERSITY' }, s);
+    await walk(s);
+    await skill(s, 'POINT & CLICK', 'WINDOWS 95');
+    await loot(s, 'book', 'PASCAL SPELLBOOK');
+    await equip(s, 'student', 'STUDENT HOODIE', 'PROCRASTINATION +1');
+  }],
+
+  ['CHAPTER + LV 1', async s => {
+    setWorld('office');
+    await show(s, '2007 - FIRST REAL JOB', 'chapter');
+    await hud.set({ guild: 'SMALL CO.', lv: 1 }, s);
+    await equip(s, 'casual', 'CASUAL WEAR', 'COFFEE UNLOCKED');
+    await walk(s);
+    await say(s, 'Automation tester: Java + Selenium E2E tests.', { who: 'GUILD MASTER' });
+    await loot(s, 'crossbow', 'SELENIUM CROSSBOW', 'AUTO-FIRE E2E TESTS');
+  }],
+
+  ['LV COUNT-UP + PATH', async s => {
+    setWorld('cas');
+    await hud.set({ guild: 'CAS', lv: 8 }, s);              // counts 1 -> 8
+    await walk(s);
+    if (live(s)) engine.flash();
+    await show(s, 'PATH CHOSEN: FRONT-END', 'title');
+    await hud.set({ path: 'FRONT-END*' }, s);
+    await equip(s, 'frontend', 'SHADES OF CLARITY', 'YOU SEE THE DOM CLEARLY NOW');
+  }],
+
+  ['FIRST TITLE + REAL NAME', async s => {
+    setWorld('epam');
+    await walk(s);
+    if (live(s)) { engine.flash(); engine.burst(160, 60, 40); }
+    await show(s, 'FIRST TITLE EARNED!\nD2 - SOFTWARE ENGINEER', 'title');
+    await hud.set({ guild: 'EPAM', title: 'D2*', lv: 10 }, s);
+    await equip(s, 'd2', 'HAWAIIAN SHIRT', 'IMPOSTOR SYNDROME ++');
+    await say(s, 'Build the JS SDK, launch sites in days!', { who: 'SODA KINGDOM', real: 'Coca-Cola' });
+  }],
+
+  ['BOSS BANNER + FIGHT', async s => {
+    setWorld('cloud');
+    hero.frames = S.hero.d4;
+    await hud.set({ title: 'D4*', lv: 16 }, s);
+    const dragon = spawn({ img: S.icon.dragon, world: true, x: ahead(230), z: 1 });
+    await walk(s);
+    await show(s, 'BOSS: ANGULARJS SUNSET DRAGON', 'boss');
+    await say(s, 'The blade you forged at CAS has turned against you!', { who: 'DRAGON' });
+    for (let i = 0; i < 3; i++) await shoot(s, dragon, i === 2);
+  }],
+
+  ['TITLE UP: D5', async s => {
+    setWorld('throne');
+    await walk(s);
+    await hud.set({ lv: 20 }, s);                           // counts 16 -> 20, full XP bar
+    if (live(s)) { engine.flash(); engine.burst(160, 60, 40, [C.yellow, C.white]); }
+    await show(s, 'TITLE UP!\nCHIEF SOFTWARE ENGINEER I', 'title');
+    await hud.set({ title: 'D5*' }, s);
+    await equip(s, 'd5', "CHIEF'S BREW", 'UNLOCKED AFTER 19 LEVELS');
+  }],
+
   ['END', async () => {
-    hero.alpha = 0;
-    overlay.innerHTML = '<p class="sub">END OF PIECE 3 TEST</p>';
+    hud.hidden = true;
+    overlay.innerHTML = '<p class="sub">END OF PIECE 4 TEST</p>';
     overlay.hidden = false;
   }],
 ];
@@ -146,10 +152,12 @@ const SCENES = [
 let index = -1, ctl = null;
 
 async function next() {
-  if (ctl) return ctl.abort();                         // finish the running scene
+  if (ctl) return ctl.abort();                             // finish the running scene
   if (index >= SCENES.length - 1) return;
   index++;
   clearTemp();
+  dialog.clear();
+  fx.replaceChildren();
   overlay.hidden = prompt.hidden = true;
   debug.hidden = false;
   const [label, run] = SCENES[index];

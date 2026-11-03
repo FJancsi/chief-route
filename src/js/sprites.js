@@ -29,7 +29,7 @@ export function heroRows(o, frame = 0) {
     '..hhhhhhhh..',
     '..hssssssh..',
     o.shades ? '..gggssggg..' : '..ssessess..',
-    '..sssssssss.',                               // nose on the right = facing right
+    '..ssssssss..',                               // nose on the right = facing right
     '...sskkss...',
     '....ssss....',
   ];
@@ -107,6 +107,21 @@ const SWORD  = ['.......w', '......wa', '.....wa.', '....wa..', '.k.wa...', '..k
 const SHIELD = ['.kkkkkk.', 'kaaaaaak', 'kawaaaak', 'kaaaaaak', 'kaaaaaak', '.kaaaak.', '..kaak..', '...kk...'];
 const BOOK   = ['kkkkkkk.', 'kaaaaaak', 'kayyyyak', 'kaaaaaak', 'kayyyaak', 'kaaaaaak', 'kwwwwwwk', 'kkkkkkkk'];
 
+// Block of flats (panel house) for the HOME scene. 27 x 30 pixels.
+function flatsRows() {
+  const wall = inner => 'kl' + inner + 'k';             // 2 + 24 + 1 = 27 wide
+  const plain = wall('l'.repeat(24));
+  const rows = ['k'.repeat(27), plain];                  // roof
+  for (let f = 0; f < 8; f++) {                          // 8 floors, 6 windows each
+    const line = Array.from({ length: 6 }, (_, w) =>
+      ((f * 7 + w * 3) % 5 === 0 ? 'yy' : 'dd') + 'll').join('');   // some windows lit
+    rows.push(wall(line), wall(line), plain);
+  }
+  const door = wall('l'.repeat(10) + 'oooo' + 'l'.repeat(10));
+  rows.push(door, door, door, 'k'.repeat(27));
+  return rows;
+}
+
 const ICONS = {
   chest:     [['.kkkkkkkkkk.', 'kooooooooook', 'kooooooooook', 'kkkkkyykkkkk',
                'kooooyyooook', 'kooooooooook', 'kooooooooook', 'kkkkkkkkkkkk'], {}],
@@ -165,6 +180,11 @@ const ICONS = {
   badge:     [['...yy...', '...yy...', 'yyyyyyyy', '.yyyyyy.', '..yyyy..', '.yy..yy.', 'yy....yy'], {}],
   robot:     [['....kk....', '....ki....', '.kkkkkkkk.', 'kllllllllk', 'klGllllGlk', 'kllllllllk', 'kllkkkkllk',
                '.kkkkkkkk.', '..kllllk..', '.kllllllk.', '.kllllllk.', '..kk..kk..'], {}],
+               flats: [flatsRows(), {}],
+  node:  [['...kk...', '.kkGGkk.', 'kGGGGGGk', 'kGwGGwGk', 'kGwwGwGk',
+           'kGwGwwGk', 'kGwGGwGk', '.kkGGkk.', '...kk...'], { G: '#539e43' }],   // NodeJS hexagon with an "N"
+  stack: [['.kkkkkk.', 'kqqqqqqk', '.kkkkkk.', 'kppppppk',
+           '.kkkkkk.', 'kGGGGGGk', '.kkkkkk.'], {}],                            // Fullstack: 3 layers
   bird0:     [['k....k', '.kyyk.', '..yy..'], {}],
   bird1:     [['......', '.kyyk.', 'k.yy.k'], {}],
 };

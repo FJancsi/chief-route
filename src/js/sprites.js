@@ -77,6 +77,10 @@ export function heroRows(o, frame = 0) {
   if (o.backpack) for (let y = 1; y < torso.length - 1; y++) put(t0 + y, 0, 'B');
   if (o.hold === 'coffee') { put(hand, 11, 'ww'); put(hand + 1, 11, 'ww'); }
   if (o.hold === 'beer')   { put(hand - 1, 11, 'mm'); put(hand, 11, 'MM'); put(hand + 1, 11, 'MM'); }
+  if (o.hold === 'staff') {                       // mentor's staff: glowing tip, full-height pole
+    put(0, 12, 'q'); put(1, 12, 'q');
+    for (let y = 2; y < rows.length; y++) put(y, 12, 'o');
+  }
   return rows;
 }
 
@@ -101,6 +105,8 @@ const NPCS = {
   mate3:    [{ shirt: 'G', pants: 'b' }, { h: '#b04020' }],
   master:   [{ shirt: 'u', pants: 'd', hold: 'coffee' }, { h: '#a0a0a0' }],
   judge:    [{ shirt: 'd', pants: 'd' }, { h: '#e0e0e0', d: '#3a2a6a' }],
+  // TMP mentor (2024): hooded robe + staff. Hair colour = hood colour, so the hood frames the face.
+  andrii:   [{ shirt: 'B', pants: 'B', hold: 'staff' }, { h: '#5a3a1e', B: '#6b4a2b', n: '#3a2414' }],
 };
 
 // ---------- ITEMS ----------

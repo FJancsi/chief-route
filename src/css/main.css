@@ -51,13 +51,14 @@ cq-dialog {
   background: var(--night);
   border: calc(var(--u) * 2) solid var(--white);
   box-shadow: 0 0 0 calc(var(--u) * 2) var(--ink);
-  animation: rise .2s steps(3);                 /* slides up, never scales (R37) */
+  animation: none;                               /* slide-in is driven from ui.js (once per box) */
   .name  { color: var(--pink); }
   .real  { color: var(--grey); }
+  .who   { min-height: 1.5em; }
   .txt   { min-height: 3em; }
   .ghost { visibility: hidden; }               /* untyped text keeps its space, so words never jump lines */
+  .timer { position: absolute; right: calc(var(--u) * 6); bottom: calc(var(--u) * 3); color: var(--yellow); }
 }
-@keyframes rise { from { translate: 0 120%; } }
 .anon .real { display: none; }                 /* open the page with ?anon to hide client names */
 
 /* ---------- banners (slide + fade, never scale) ---------- */
@@ -91,6 +92,8 @@ cq-dialog {
   }
   .sub { color: var(--cyan); }
   .who { color: var(--grey); }
+  .stat { color: var(--yellow); font-size: calc(var(--u) * 7); line-height: 1.8; }
+  &.end { background: rgb(20 12 36 / .85); }
   &.c64 {
     place-content: start; text-align: left;
     background: #40318d; color: #7869c4;

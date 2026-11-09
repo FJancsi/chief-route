@@ -6,7 +6,7 @@ import { GROUND, WORLDS, ease, sleep, tween } from './engine.js';
 import { C } from './palette.js';
 import { banner, overlay, viewTransition } from './ui.js';
 
-export const LV_MAX = 25;
+export const LV_MAX = 26;                // timeline v1.2 (25) + the TMP mentor scene, LV 21 (2024)
 const WALK = 140;
 
 // extra worlds for the split prologue
@@ -14,6 +14,12 @@ Object.assign(WORLDS, {
   home:   { sky: ['#3a2a7a', '#ff8a3d'], far: 'city',  farC: '#2d1b5a', win: C.yellow, ground: '#3c8a4a', dirt: '#4a3326' },
   school: { sky: ['#2a3a8e', '#5a7ad8'], far: 'hills', farC: '#2f5b4a', ground: '#3c8a4a', dirt: '#4a3326', clouds: true },
   high:   { sky: ['#1b1036', '#3d2a7a'], far: 'city',  farC: '#2a1f55', win: C.cyan, ground: '#6a5a8e', dirt: '#2d2448', stars: true },
+  // TMP mentor scene: misty green swamp hills (a quiet nod to a certain small green master)
+  dojo:   { sky: ['#0f1f1a', '#2f5a3a'], far: 'hills', farC: '#1f3a2a', ground: '#3a6a3a', dirt: '#1f2a1a', stars: true },
+  // Piece 6 worlds
+  soda:   { sky: ['#3a0f2a', '#ff4fa3'], far: 'city',  farC: '#5a1a3a', win: C.yellow, ground: '#e83b3b', dirt: '#5a1a1a' },
+  lair:   { sky: ['#0a0a12', '#2a1020'], far: 'towers', farC: '#1a1a24', win: C.red, ground: '#3a3a4a', dirt: '#1a1a24', stars: true },
+  beach:  { sky: ['#ff6f9a', '#ffd23f'], far: 'peaks', farC: '#3a2a7a', ground: '#f2d27a', dirt: '#c9a050', clouds: true },
 });
 
 export const dropOld = engine => { engine.actors = engine.actors.filter(a => !a.old); };
@@ -107,12 +113,77 @@ function drawGate(g, x, y, t, a) {
 
 const TITLE = `
   <h1>CAREER<br>QUEST</h1>
-  <p class="sub">FROM C64 TO CHIEF</p>
+  <p class="sub">The road to Chief Engineering</p>
   <p class="who">JANOS FEKETE * EPAM</p>`;
 
 const C64_LINES = ['**** COMMODORE 64 BASIC V2 ****', '64K RAM SYSTEM 38911 BYTES FREE', '',
   'READY.', 'LOAD"*",8,1', 'SEARCHING FOR *', 'LOADING', 'READY.',
   '10 PRINT "HELLO WORLD"', '20 GOTO 10', 'RUN'];
+
+// Piece 6 props, drawn like drawWin95 (y = ground line)
+function drawBeachChair(g, x, y) {
+  const L = x - 14, T = y - 14;
+  g.fillStyle = C.orange; g.fillRect(L, T, 28, 3);
+  g.fillStyle = C.white;  g.fillRect(L + 4, T + 3, 20, 2);
+  g.fillStyle = C.yellow; g.fillRect(L, T + 5, 28, 2);
+  g.fillStyle = C.ink;    g.fillRect(L + 2, T + 7, 2, 7); g.fillRect(L + 24, T + 7, 2, 7);
+  g.fillRect(L + 4, T + 12, 20, 2);
+}
+
+function drawJudgeBench(g, x, y) {
+  const L = x - 36, T = y - 26;
+  g.fillStyle = '#6b3a1e'; g.fillRect(L, T, 72, 6);
+  g.fillStyle = C.ink;     g.fillRect(L + 4, T + 6, 4, 20); g.fillRect(L + 64, T + 6, 4, 20);
+  g.fillStyle = C.yellow;  g.font = '6px "Press Start 2P"'; g.textBaseline = 'top';
+  g.fillText('ASMT', L + 24, T - 8);
+}
+
+// TMP - Technology Mentoring Program (2024, D4). Andrii: mentor, friend, "kinda Yoda".
+// Final frame (R40): Andrii stands behind the hero as a party member.
+export const TMP_MENTOR = { name: 'TMP: THE MENTOR', async run(c) {
+  await c.transition(() => c.world('dojo'));
+  await c.set({ year: '2024' });
+  await c.banner('SIDE QUEST: TMP\nTECHNOLOGY MENTORING PROGRAM', 'chapter');
+  const sage = c.prop(c.S.npc.andrii, 220, { flip: true, z: 1 });      // faces the hero
+  await c.walk();
+  await c.say('Hmm. Long you have walked, D4. Ready for the Chief path, you are.',
+              { who: 'MASTER ANDRII', real: 'TMP mentor' });
+  await c.say('Associate Chief first, maybe? Safer, it sounds...', { who: 'YOU' });
+  await c.say('Associate Chief? No! Chief, or Chief not. There is no associate.',
+              { who: 'MASTER ANDRII', real: 'TMP mentor' });
+  c.quake(2);
+  await c.skill('CHIEF MINDSET', 'CONFIDENCE ++\nIMPOSTOR SYNDROME --');
+  await c.say('Train you, I will. And a friend, I will be.', { who: 'MASTER ANDRII', real: 'TMP mentor' });
+
+  // the world prop becomes a screen-space party member that follows the hero
+  const sx = sage.x - c.engine.camera;
+  c.engine.remove(sage);
+  const mentor = c.engine.add({ frames: c.S.npc.andrii, x: sx, walker: true, moving: true,
+                                flip: true, z: 1, keep: true });
+  c.state.mentor = mentor;
+  await c.tween(mentor, { x: 44 }, 1400, ease.inOut);
+  mentor.moving = false; mentor.flip = false;
+  c.burst(44, GROUND - 40, 16, [C.green, C.white]);
+  await c.banner('NEW PARTY MEMBER:\nANDRII - MENTOR & FRIEND', 'item');
+}};
+
+// Call inside the D5 ASMT Trial scene (LV 22, 2025), after the title banner.
+// The mentor stays in the party until D5 (he walks along through 2024-2025).
+export async function mentorNod(c) {
+  if (!c.state.mentor) return;
+  await c.say('Chief, now you are. Proud, I am.', { who: 'MASTER ANDRII', real: 'TMP mentor' });
+  c.burst(c.state.mentor.x, GROUND - 40, 12, [C.green, C.yellow]);
+}
+
+// Andrii leaves the party after the ASMT trial (LV 22): he walks off to the left.
+export async function mentorLeaves(c) {
+  const m = c.state.mentor;
+  if (!m) return;
+  m.moving = true; m.flip = true;                  // walks off to the left, facing away
+  await c.tween(m, { x: -40, alpha: 0 }, 1400, ease.inOut);
+  c.engine.remove(m);
+  c.state.mentor = null;
+}
 
 // ---------- SCENES (index = LV) ----------
 export const scenes = [
@@ -171,6 +242,7 @@ export const scenes = [
 
   { name: 'UNIVERSITY', async run(c) {                                  // LV 5
     await c.transition(() => c.world('academy'));
+    await c.set({ year: '2004' });
     await c.set({ guild: 'UNIVERSITY' });
     await c.equip('student', 'STUDENT HOODIE', 'PROCRASTINATION +1');
     const chests = [130, 180, 230].map(x => c.prop('chest', x));
@@ -291,7 +363,180 @@ export const scenes = [
     await c.say('Mid developer at last. Chapter 1 begins...', { who: 'GUILD MASTER', real: 'EPAM' });
   }},
 
-  { name: 'TO BE CONTINUED', noLv: true, hud: false, async run() {
-    overlay.show('<h1>TO BE<br>CONTINUED</h1><p class="sub">D2 -> D5 IN PIECE 6</p>');
+  // ---------- PIECE 6: LV 12-20 (Coca-Cola -> RFP Hydra) ----------
+
+  { name: 'SODA KINGDOM', async run(c) {                                  // LV 12
+    await c.transition(() => c.world('soda'));
+    await c.set({ guild: 'EPAM', year: '2016' });
+    const bugs = [190, 230].map(x => c.prop('bug', x, { bob: 1 }));
+    await c.walk();
+    await c.say('Coca-Cola e-commerce. Your small web shops finally pay off.', { who: 'GUILD MASTER', real: 'Coca-Cola' });
+    for (const b of bugs) await c.shoot(b);
+    await c.loot('anvil', 'WIDGET FORGE', 'LAUNCH SITES IN DAYS');
+    await c.skill('JS SDK CORE', 'YOU BUILT THE CORE');
+  }},
+
+  { name: 'HOTEL EMPIRE', async run(c) {                                  // LV 13
+    await c.transition(() => c.world('hotel'));
+    await c.set({ guild: 'HOTELS.COM', year: '2017' });
+    const spiders = [200, 240].map(x => c.prop('spider', x, { bob: 1 }));
+    await c.walk();
+    await c.say('SEO crawler spiders everywhere. Let us clean the web.', { who: 'HOTELS.COM', real: 'Hotels.com' });
+    for (const s of spiders) await c.shoot(s);
+    await c.banner('9 UIE COMPANIONS JOIN\nFIRST MENTEE - NOV 2017', 'chapter');
+    await c.loot('trophy', 'HACKATHON ARENA', 'WON THE HOTELS.COM HACKATHON');
+    await c.skill('NODEJS', 'LEARNED DURING HCOM');
+    await c.loot('node', 'NODEJS ICON', 'NODE.JS');
+  }},
+
+  { name: 'D3: SENIOR', async run(c) {                                    // LV 14
+    await c.transition(() => c.world('hotel'));
+    await c.set({ year: '2018', title: 'D3' });
+    await c.banner('TITLE UP!\nD3 - SENIOR SOFTWARE ENGINEER', 'title');
+    await c.equip('d3', 'FLIP-FLOPS', 'REVIEW SPEED ++\nRESPONSIBILITY ++');
+    await c.say('Gatekeeper: tech interviews and ASMT expert. The counters start now.', { who: 'GUILD MASTER', real: 'EPAM' });
+    await c.say('Still in Hotel Empire: KES re-architecture, CMS -> FLEX', { who: 'NARRATOR' });
+  }},
+
+  { name: 'EMERALD VAULT', async run(c) {                                 // LV 15
+    await c.transition(() => c.world('bank'));
+    await c.set({ year: '2021' });
+    await c.set({ guild: 'BANK OF IRELAND' });
+    const chest = c.prop('chest', 170);
+    await c.walk();
+    await c.say('Audience Builder on GCP. Big finance, big data.', { who: 'BANK OF IRELAND', real: 'Bank of Ireland' });
+    c.open(chest);
+    await c.loot('telescope', 'BIGQUERY TELESCOPE');
+    await c.skill('MICROFRONTEND SHARDS', 'GCP MFE PROOF OF CONCEPT');
+  }},
+
+  { name: 'D4: LEAD', async run(c) {                                      // LV 16
+    await c.transition(() => c.world('epam'));
+    await c.set({ year: '2022', title: 'D4' });
+    await c.banner('TITLE UP!\nD4 - LEAD SOFTWARE ENGINEER', 'title');
+    await c.equip('d4', 'QUALITY ATTRIBUTES CAP', 'WORN BACKWARDS\nSCALABILITY ++\nAVAILABILITY ++\nTRADE-OFF VISION ++');
+    await c.banner('GWS ARMY OF 26\n13 DEV - 6 QA - 5 DEVOPS - 1 BA - 1 SA', 'chapter');
+    await c.loot('amulet', 'LOAN CALCULATOR AMULET');
+    await c.loot('crystal', 'WEB CHAT CRYSTAL');
+    await c.loot('tome', 'PATTERN LIBRARY TOME');
+    await c.skill('AWS CLOUD ASCENSION', 'SQS - SNS - LAMBDA');
+  }},
+
+  { name: 'ANGULARJS SUNSET', async run(c) {                              // LV 17
+    await c.transition(() => c.world('lair'));
+    const dragon = c.prop('dragon', 200, { bob: 2 });
+    await c.walk();
+    await c.banner('BOSS: ANGULARJS SUNSET DRAGON', 'boss');
+    await c.say('The blade you forged at CAS has turned against you!', { who: 'ANGULARJS', real: 'AngularJS sunset' });
+    await c.shoot(dragon, false);
+    await c.shoot(dragon, false);
+    await c.shoot(dragon, true);
+    await c.skill('SUNSET DISCOVERY', 'LEGACY MIGRATION PLANNED');
+  }},
+
+  { name: 'QUALITY ARSENAL', async run(c) {                               // LV 18
+    await c.transition(() => c.world('epam'));
+    await c.set({ guild: 'EPAM' });
+    await c.walk();
+    await c.loot('lantern', 'LIGHTHOUSE LANTERN', 'CLI TOOL ON AWS');
+    await c.loot('cannon', 'ARTILLERY CANNON', 'LOAD TESTING');
+    await c.loot('axeShield', 'PLAYWRIGHT + AXE SHIELD', 'WCAG 2.1 AA');
+    await c.loot('npm', 'NPM CRAFT', 'ADAPTIVE-LOADING-HELPER');
+    await c.loot('npm', 'NPM CRAFT', 'IMAGE-OPTIMIZER');
+  }},
+
+  { name: 'ON-PREM GOLEM', async run(c) {                                  // LV 19
+    await c.transition(() => c.world('lair'));
+    await c.set({ guild: 'EPAM' });
+    const golem = c.prop('golem', 210, { bob: 1 });
+    await c.walk();
+    await c.banner('BOSS: ON-PREM GOLEM', 'boss');
+    await c.shoot(golem, false);
+    await c.loot('monocle', 'MONOCLE OF AUDIT', 'BUNGIE AND VAS CODE AUDITS');
+    await c.say('Ticket X moves from on-premises to GCP.', { who: 'SAS GRADUATE WORK', real: 'SAS graduate project' });
+    await c.shoot(golem, true);
+  }},
+
+  { name: 'RFP HYDRA', async run(c) {                                     // LV 20
+    await c.transition(() => c.world('lair'));
+    const hydra = c.prop('hydra', 200, { bob: 2 });
+    await c.walk();
+    await c.banner('BOSS: RFP HYDRA', 'boss');
+    await c.say('Landis IoT RFP. The Hydra grows a head.', { who: 'RFP', real: 'Landis IoT' });
+    await c.shoot(hydra, false);
+    await c.say('GWS UK migration RFP. Another head.', { who: 'RFP', real: 'GWS UK migration' });
+    await c.shoot(hydra, false);
+    await c.shoot(hydra, true);
+    await c.skill('RFP RESPONSE', 'THE HYDRA FALLS');
+  }},
+
+  // ---------- LV 21 (2024, D4): TMP mentor ----------
+  // Andrii: mentor, friend, "kinda Yoda". Final frame (R40): he stands behind the hero.
+  TMP_MENTOR,
+
+  // ---------- LV 22-26 (D5 -> finale) ----------
+
+  { name: 'D5: ASMT TRIAL', async run(c) {                                // LV 22
+    await c.transition(() => c.world('throne'));
+    await c.set({ year: '2025' });
+    const bench = c.prop(null, 200, { draw: drawJudgeBench });
+    await c.walk();
+    await c.say('The ASMT trial. The committee is watching.', { who: 'ASMT COMMITTEE', real: 'ASMT' });
+    await c.set({ title: 'D5' });
+    c.flash(); c.burst(160, 60, 40, [C.yellow, C.pink]); c.quake(3);
+    await c.banner('TITLE UP!\nD5 - CHIEF SOFTWARE ENGINEER I', 'title');
+    await c.equip('d5', "CHIEF'S BREW", 'THE CHIEF LEGEND');
+    await mentorNod(c);
+    await mentorLeaves(c);
+  }},
+
+  { name: 'MENTORING COUNCIL', async run(c) {                             // LV 23
+    await c.transition(() => c.world('bank'));
+    await c.set({ guild: 'EPAM' });
+    const hydra = c.prop('hydra', 200, { bob: 2 });
+    await c.walk();
+    await c.banner('ASE MENTORING - JSCC AMBASSADOR', 'chapter');
+    await c.banner('51 INTERVIEWS - 46 ASMT SESSIONS (9 COMMITTEES)\n27 MENTEES', 'info');
+    await c.say('The Hydra grows new heads. You cut them faster now, with more RFPs.', { who: 'NARRATOR' });
+    await c.shoot(hydra, false);
+    await c.shoot(hydra, true);
+    await c.skill('MENTOR', 'ASE MENTORING - JSCC AMBASSADOR');
+  }},
+
+  { name: 'FULLSTACK 2026', async run(c) {                                // LV 24
+    await c.transition(() => c.world('cloud'));
+    await c.set({ year: '2026' });
+    await c.banner('2026 - PATH CHANGE', 'chapter');
+    await c.set({ path: 'FULLSTACK' });
+    c.flash();
+    await c.banner('PATH: FULLSTACK\nFRONT END + NODEJS + CLOUD', 'title', 'stack');
+    await c.loot('stack', 'FULLSTACK STACK', 'THE ARMOR OF BOTH WORLDS');
+  }},
+
+  { name: 'AI ERA', async run(c) {                                        // LV 25
+    await c.transition(() => { c.engine.rain = true; });
+    await c.set({ year: '2026' });
+    await c.say('The Matrix rain returns. The JS sword dissolves into code.', { who: 'NARRATOR' });
+    await c.loot('staff', 'AGENT STAFF', 'COPILOT - CLAUDE CODE - MCP PORTALS');
+    await c.transition(() => c.world('beach'));
+    const chair = c.prop(null, 200, { draw: drawBeachChair });
+    await c.walk();
+    await c.say('Relaxing in a beach chair while the agents code.', { who: 'NARRATOR' });
+    await c.skill('AI COMPANIONS', 'AGENTS CODE, THE HERO RELAXES');
+  }},
+
+  { name: 'FINALE', async run(c) {                                       // LV 26
+    await c.transition(() => c.world('beach'));
+    await c.set({ guild: 'EPAM', title: 'D5', path: 'FULLSTACK' });
+    overlay.show(`
+      <h1>TROPHY ROOM</h1>
+      <p class="stat">D5 - CHIEF SOFTWARE ENGINEER I</p>
+      <p class="stat">408 BADGES</p>
+      <p class="stat">FULLSTACK - 2026</p>`, 'end');
+    await c.wait(3000);
+    overlay.show(`
+      <h1>A NEW GAME<br>BEGINS...</h1>
+      <p class="sub">YOU HAVE ONE LIFE, DON'T BLOW IT.</p>
+      <p class="who">MAHALO</p>`, 'end');
   }},
 ];

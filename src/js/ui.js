@@ -48,30 +48,68 @@ class CqHud extends HTMLElement {
 
 // ---------- <cq-dialog>: name + real name + typewriter text ----------
 class CqDialog extends HTMLElement {
+  #advance = null;                                          // what SPACE does while a line is on screen
+
   connectedCallback() {
     this.innerHTML = `
       <p class="who"><span class="name"></span> <span class="real"></span></p>
-      <p class="txt"><span class="shown"></span><span class="ghost"></span></p>`;
+      <p class="txt"><span class="shown"></span><span class="ghost"></span></p>
+      <span class="timer"></span>`;
+    this.hidden = true;
   }
+
+  // true while a line is on screen (typing or counting down)
+  get active() { return this.#advance !== null; }
+
+  // SPACE, step 1: finish typing. SPACE, step 2: end the countdown and move on.
+  advance() { this.#advance?.(); }
 
   async say(text, { who = '', real = '', signal } = {}) {
     const q = sel => this.querySelector(sel);
     q('.name').textContent = who;
-    q('.real').textContent = real ? `(${real})` : '';
+    q('.real').innerHTML = real ? `(${real})` : '&nbsp;';   // keeps the line height when empty
     const shown = q('.shown'), ghost = q('.ghost');
-    this.hidden = false;
-    for (let i = 0; i <= text.length; i++) {        // typewriter
-      if (signal?.aborted) break;
+    if (this.hidden) {                                      // slide in once per box, not once per line
+      this.hidden = false;
+      this.animate([{ translate: '0 120%' }, { translate: '0 0' }], { duration: 350, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    }
+
+    const typing = lineSignal(signal);
+    this.#advance = () => typing.abort();
+    for (let i = 0; i <= text.length; i++) {                // typewriter
+      if (typing.signal.aborted) break;
       shown.textContent = text.slice(0, i);
-      ghost.textContent = text.slice(i);            // reserves the final layout
-      await sleep(text[i - 1] === ' ' ? 12 : 28, signal);
+      ghost.textContent = text.slice(i);                    // reserves the final layout
+      await sleep(text[i - 1] === ' ' ? 12 : 28, typing.signal);
     }
     shown.textContent = text;
     ghost.textContent = '';
-    await sleep(900 + text.length * 30, signal);    // reading time
+
+    const reading = lineSignal(signal);
+    this.#advance = () => reading.abort();
+    await this.#countdown(10, reading.signal);              // 10 s fallback, SPACE ends it early
+    this.#advance = null;
   }
 
-  clear() { this.hidden = true; }
+  // visible countdown: 10 -> 1
+  async #countdown(seconds, signal) {
+    const timer = this.querySelector('.timer');
+    for (let s = seconds; s > 0 && !signal.aborted; s--) {
+      timer.textContent = String(s);
+      await sleep(1000, signal);
+    }
+    timer.textContent = '';
+  }
+
+  clear() { this.#advance = null; this.hidden = true; }
+}
+
+// a per-line controller that also aborts when the whole scene is skipped
+function lineSignal(parent) {
+  const c = new AbortController();
+  if (parent?.aborted) c.abort();
+  else parent?.addEventListener('abort', () => c.abort(), { once: true });
+  return c;
 }
 
 customElements.define('cq-hud', CqHud);
@@ -88,7 +126,11 @@ function iconCanvas(bmp) {
 }
 
 // kind: item | skill | equip | boss | chapter | title | info
-// Banners are short-lived pop-ups. When the scene is skipped they don't appear at all.
+// A banner stays up until its 10 s timer ends or SPACE advances it. It always shows,
+// even when SPACE is pressed right after the scene started (it is a step, not a skip).
+const bannerSteps = new Set();                              // pending banner dismissers (main.js calls them)
+export const advanceBanner = () => { const [first] = bannerSteps; first?.(); return !!first; };
+
 export async function banner(layer, text, kind, signal, icon) {
   if (signal.aborted) return;
   const el = document.createElement('div');
@@ -97,17 +139,19 @@ export async function banner(layer, text, kind, signal, icon) {
   el.append(Object.assign(document.createElement('span'), { textContent: text }));
   layer.append(el);
   const anim = el.animate([
-    { translate: '-50% -120%', opacity: 0 },                       // slide down in 8-bit steps
-    { translate: '-50% -50%', opacity: 1, offset: 0.12 },
-    { translate: '-50% -50%', opacity: 1, offset: 0.85 },
+    { translate: '-50% -120%', opacity: 0 },
+    { translate: '-50% -50%', opacity: 1, offset: 0.1, easing: 'ease-out' },
+    { translate: '-50% -50%', opacity: 1, offset: 0.9 },
     { translate: '-50% -50%', opacity: 0 },
-  ], { duration: 2600, easing: 'steps(26)', fill: 'forwards' });
-  const skip = () => anim.finish();
-  signal.addEventListener('abort', skip, { once: true });
+  ], { duration: 10000, fill: 'forwards' });
+  const done = () => anim.finish();
+  bannerSteps.add(done);
+  signal.addEventListener('abort', done, { once: true });
   await anim.finished.catch(() => {});
-  signal.removeEventListener('abort', skip);
+  bannerSteps.delete(done);
   el.remove();
 }
+
 
 // ---------- full-screen overlay: title card, C64 screen, end card ----------
 export const overlay = {

@@ -2,7 +2,7 @@
 // SPACE: start the next scene, or (while a scene plays) jump to its final frame.
 import { Engine, GROUND } from './engine.js';
 import { bakeAll } from './sprites.js';
-import { overlay } from './ui.js';
+import { overlay, advanceBanner } from './ui.js';
 import { scenes, makeCtx, dropOld, LV_MAX } from './story.js';
 
 const $ = sel => document.querySelector(sel);
@@ -63,7 +63,13 @@ async function goto(i) {
 }
 
 function next() {
-  if (ctl) return ctl.abort();
+  if (ctl) {
+    // one step per SPACE: a banner or a dialog line on screen is advanced first.
+    // Only when nothing is on screen does SPACE jump the scene to its final frame (R40).
+    if (advanceBanner()) return;
+    if (deps.dialog.active) return deps.dialog.advance();
+    return ctl.abort();
+  }
   if (busy || index >= scenes.length - 1) return;
   goto(index + 1);
 }

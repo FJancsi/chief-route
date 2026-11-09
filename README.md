@@ -20,7 +20,7 @@ Open <http://localhost:8080> in Brave or Chrome.
 
 | How | What it does |
 |---|---|
-| **SPACE** | Starts the next scene. During a scene, it jumps to that scene's final frame. The first press also switches to fullscreen. |
+| **SPACE** | While a dialog line is on screen: the first press finishes the typing, the second press moves on to the next line. Otherwise it starts the next scene, or jumps to the final frame of a scene that is playing. The first press also switches to fullscreen. |
 | `#9` in the URL | Opens directly at LV 9 for rehearsal. Earlier scenes are fast-forwarded silently, so the HUD and outfit are correct. |
 | `?anon` | Hides real client names in dialogs, for public showings. |
 
@@ -77,7 +77,7 @@ The game is **320×180 game pixels**. `main.js` sets the CSS variable `--u` to t
 - `bakeAll()` turns every map into an `ImageBitmap` once at startup: `S.hero[outfit]` and `S.npc[name]` are two-frame walk cycles, and `S.icon[name]` is one bitmap.
 
 ### ui.js: the interface
-- **`<cq-hud>`** shows LV, the XP bar (LV / 25), YEAR, TITLE, GUILD and PATH. Changed values flash in colour, but only when the scene isn't being skipped.
+- **`<cq-hud>`** shows LV, the XP bar (LV / `LV_MAX`, currently 26), YEAR, TITLE, GUILD and PATH. Changed values flash in colour, but only when the scene isn't being skipped.
 - **`<cq-dialog>`** has a speaker name, an optional real name (hidden with `?anon`), typewriter text and a reading pause. Hidden "ghost" text reserves the final layout, so words never jump between lines while typing.
 - **Banners** (`item`, `skill`, `equip`, `boss`, `chapter`, `title`) slide in and fade out in 8-bit steps. When a scene is skipped they don't appear at all.
 - **`overlay`** is for full-screen cards (title, C64 screen, end card). `overlay.type()` types the C64 lines. If skipped, it prints them all at once, so the final frame is the same (R40).
@@ -110,7 +110,7 @@ The game is **320×180 game pixels**. `main.js` sets the CSS variable `--u` to t
 | `c.open(chest)`, `c.shoot(target, kill?)` | small interactions |
 | `c.flash / c.burst / c.quake / c.wait / c.tween` | effects and timing |
 
-`c.state` carries things between scenes, such as the bird companion or the CAS party.
+`c.state` carries things between scenes, such as the bird companion, the CAS party or the mentor (Andrii, 2024 → D5).
 
 ## Adding a scene
 
@@ -127,7 +127,9 @@ The game is **320×180 game pixels**. `main.js` sets the CSS variable `--u` to t
 - [x] Piece 3: sprites (hero outfits, NPCs, items, enemies)
 - [x] Piece 4: HUD, dialog box, banners
 - [x] Piece 5: scenes LV 1–11 (Home → EPAM D2)
-- [ ] Piece 6: scenes LV 12–25 (Coca-Cola, Hotels.com + NodeJS, D3 → D5, Fullstack 2026, AI era, Mahalo finale)
+- [x] Piece 6: scenes LV 12–26 (Coca-Cola, Hotels.com + NodeJS, D3 → D4, **TMP mentor Andrii (2024)**, D5, Fullstack 2026, AI era, Mahalo finale)
+
+The storyline lives in [`STORYBOARD.md`](STORYBOARD.md).
 
 ## License
 
